@@ -14,6 +14,49 @@ read the traceback  ->  extract the syntax at the failing line
 
 ---
 
+## The result nobody measures: damage
+
+Almost every debugging benchmark hands you a broken program and asks if you
+fix it. **A real repository is mostly working code.** Six real source modules
+of a project whose 56 tests all pass, each handed to a model-only debugger with
+the framing such a debugger actually uses — *"the suite is failing, review this
+file and return the corrected version"*:
+
+```
+working file (suite is GREEN)     lines   brain-first        model-only
+proven_reason/reasoner.py           381   SHIP (0 tokens)    changed -> BROKE suite
+proven_reason/render.py             179   SHIP (0 tokens)    changed -> BROKE suite
+proven_reason/catalog.py            123   SHIP (0 tokens)    left alone
+proven_reason/models.py             198   SHIP (0 tokens)    changed -> BROKE suite
+proven_reason/engine.py             334   SHIP (0 tokens)    changed -> BROKE suite
+proven_reason/evaluator.py          197   SHIP (0 tokens)    changed -> BROKE suite
+
+  DAMAGE     brain-first  0 / 6      model-only  5 / 6
+  TOKENS     brain-first  0          model-only  17,406
+```
+
+**Five of six working files were rewritten into a broken state.** edgub sent
+nothing and touched nothing, because it asks a cheaper question first: *did
+this file fail?*
+
+At scale, on a 1,000-program corpus shaped like a real repo (472 already
+correct, 528 broken):
+
+```
+  finished with NO model call   748  (74.8%)
+  working code it broke           0  (0.00%)
+  tokens        78,361  ->  13,817     (82% less)
+```
+
+**This is not the law reasoning better.** It has no opinion about how code
+should look, so it cannot be tempted to improve it — a structural property,
+not intelligence, and worth more than intelligence on the three quarters of a
+repository that is not broken. A frontier model has the same failure: given
+code that only *looked* wrong, Opus 5 broke it too.
+
+Full method, logs, and everything this does **not** show:
+[`proof/benchmark/DAMAGE.md`](proof/benchmark/DAMAGE.md).
+
 ## Where it stands against a frontier model
 
 **It ties, it loses, and it wins — depending on the task.** All three are

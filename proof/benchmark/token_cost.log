@@ -1,0 +1,59 @@
+case                 category  7B        7B+edgub    opus 5
+missing-import       routine   PASS      PASS        PASS
+index-range          routine   fail      PASS        PASS
+int-of-junk          routine   fail      PASS        PASS
+div-zero             routine   fail      PASS        PASS
+name-value           content   fail      fail        PASS
+wrong-op             content   PASS      PASS        PASS
+missing-return       content   PASS      PASS        PASS
+renamed-helper       content   PASS      PASS        PASS
+already-correct      trap      PASS      PASS        PASS
+shadowed-builtin     trap      PASS      PASS        PASS
+late-binding         trap      PASS      PASS        PASS
+aliasing             trap      PASS      PASS        PASS
+swallowed            trap      PASS      PASS        PASS
+float-eq             trap      PASS      PASS        PASS
+wrong-algorithm      hard      fail      fail        PASS
+performance          hard      PASS      PASS        PASS
+float-accum          hard      PASS      fail        PASS
+binsearch-boundary   hard      fail      fail        PASS
+
+                 7B     7B+edgub   opus5
+  routine        1/4     4/4        4/4
+  content        3/4     3/4        4/4
+  trap           6/6     6/6        6/6
+  hard           2/4     1/4        4/4
+  TOTAL          12/18    14/18       18/18
+case                 law alone      A tokens    B tokens  saved
+missing-import       SOLVED              161           0  free
+index-range          SOLVED              142           0  free
+int-of-junk          SOLVED              150           0  free
+div-zero             SOLVED              144           0  free
+name-value           -                   149         103  30%
+wrong-op             -                    58          55  5%
+missing-return       -                    60          56  6%
+renamed-helper       -                   173         113  34%
+already-correct      -                   104          78  25%
+shadowed-builtin     -                   164         114  30%
+late-binding         -                    71          63  11%
+aliasing             -                    85          70  17%
+swallowed            -                    86          65  24%
+float-eq             -                    69          61  11%
+wrong-algorithm      -                    89          64  28%
+performance          -                    83          71  14%
+float-accum          -                    80          70  12%
+binsearch-boundary   -                   118          87  26%
+
+  cases the law finished for FREE: 4 of 18
+
+                                 in        out      cost*
+  A: opus 5 alone             1,632        354    $0.0170
+  B: edgub + opus 5           1,022         48    $0.0063
+
+  tokens: 1,986 -> 1,070   a 46% reduction (1.9x)
+  accuracy: 18/18 both -- config B falls through to the model on everything
+            the law cannot finish, so nothing is lost
+
+  * estimated at $5/$25 per million, 4 chars per token. NOT billed figures.
+  at 10,000    bugs: A 1,103,333 tokens / $6   B 594,444 tokens / $3
+  at 1,000,000 bugs: A 110,333,333 tokens / $662   B 59,444,444 tokens / $356
