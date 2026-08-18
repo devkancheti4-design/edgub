@@ -14,6 +14,39 @@ read the traceback  ->  extract the syntax at the failing line
 
 ---
 
+## Where it stands against a frontier model
+
+**It ties, it loses, and it wins — depending on the task.** All three are
+measured, with ground truth found by execution:
+
+| test | the law | law + a free local 7B | a frontier model | verdict |
+|---|---|---|---|---|
+| routing a failure to the right repair (14) | **11/11** | — | 11/11 | **tie** |
+| repairing ordinary bugs (8) | **3/8** | 8/8 | 8/8 | **loses alone, ties paired** |
+| hard traps — misleading frames, shadowed builtins, late binding (8) | — | **8/8** | 7/8 | **wins** |
+| a real repository, 5 injected faults | **1/5** | — | — | **loses** |
+
+**The law alone is not a debugger** — 3/8 once a repair needs content it
+cannot invent, and 1/5 on real code where its repairs are too shallow.
+
+**Paired with a free local model it matches a frontier model**, at 2.2x the
+speed and no cost, because the law decides *what* to do and the model only
+supplies *content*.
+
+**On the hard set it beats a frontier model**, and for one structural reason:
+
+```python
+def apply(items, factor):
+    return [scale(factor, i) for i in items]   # already correct
+```
+
+That looks like transposed arguments. Opus 5 transposed them and broke it. The
+7B did the same. The law observed `PASSES` and returned `SHIP` — it has no
+opinion about how code should look, and reacts only to what happened.
+
+Full numbers, methods, logs and everything that would make them wrong:
+[`proof/benchmark/BENCHMARK.md`](proof/benchmark/BENCHMARK.md).
+
 ## The result that matters
 
 Fourteen broken programs. Both sides saw the same traceback and chose from the

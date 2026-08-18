@@ -1,0 +1,13 @@
+case               A: law       B: 7B        C: law+7B
+missing-import     PASS         PASS         PASS
+index-range        PASS         PASS         PASS
+int-of-junk        PASS         PASS         PASS
+name-needs-value   fail         PASS         PASS
+name-needs-ctor    fail         PASS         PASS
+wrong-op           fail         PASS         PASS
+off-by-one         fail         PASS         PASS
+missing-return     fail         PASS         PASS
+
+  law only       3/8      0.9s total
+  7B only        8/8     16.5s total
+  law + 7B       8/8      7.6s total
