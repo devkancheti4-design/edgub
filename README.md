@@ -118,3 +118,58 @@ five benchmarks that could not run from a clean clone, deleted with the
 ## License
 
 MIT.
+
+## Fuse it to the model you already run
+
+```python
+import edgub
+from edgub.fuse import fuse, Anthropic
+
+rz = fuse(Anthropic("claude-opus-5"))
+r = rz.fix(".")
+
+r.free        # repaired by edgub, 0 tokens
+r.by_model    # repaired by the model
+r.tokens      # what the model actually cost
+```
+
+```
+1 repaired (1 free, 0 by the model), 1 unfixed, 0 tokens, 2.3s
+  free   itertoolz.unique  name item->val
+  model calls made : 0
+```
+
+**This is the honest way to buy it: a token reducer, not a replacement.**
+edgub repairs what your tests determine for nothing; what it cannot reach
+becomes a *minimal* prompt — the failing tests and the one function — instead
+of an agent shipping a repository into context. The model still decides
+everything edgub could not.
+
+```
+                                    repaired    tokens
+edgub alone                            8/10          0
+a frontier model alone                10/10     74,964
+edgub + model on the remainder        10/10     26,630   -> 64.5% saved
+```
+
+Three properties that make it safe to bolt on:
+
+- **the failure mode is a passthrough**, never a wrong answer — anything edgub
+  misses reaches your model exactly as it would have without edgub;
+- **the model's patch is verified** — spliced, compiled, suite run, reverted if
+  it does not hold;
+- **`Callable_`** lets you measure the saving with a stand-in before spending
+  anything.
+
+### Two caveats, stated where they cannot be missed
+
+**64.5%, not 80%.** Eight of ten never reach the model, but the two that do are
+the hard ones and cost more per bug. And batching matters and has nothing to do
+with edgub: one bug sent alone cost 26,646 tokens; sent as a pair, both cost
+26,630. An unbatched baseline would let this read "90% saved" for identical
+work. 64.5% is the matched-conditions number and the only one to quote.
+
+**The Anthropic path is written, not exercised.** There was no API key in the
+environment where this was built, so `Anthropic` is untested against the live
+API; `Callable_` and the whole surrounding pipeline are tested. Do not treat
+the adapter as proven until you have run it once yourself.
