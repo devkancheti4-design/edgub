@@ -1,7 +1,8 @@
-"""IS THE LAW A LOOKUP TABLE? Four checks that a table fails.
+"""HOW MUCH OF THE LAW IS A LOOKUP TABLE? Measured both ways.
 
-The commonest reading of this project is that `decide()` is a disguised table of
-memorised answers. It is not, and none of the following requires trusting me.
+An outside reviewer traced the mechanism and called it an error-type -> act
+table encoded as arithmetic. They are substantially right, and this file
+measures exactly how right rather than arguing.
 """
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.abspath(_os.path.join(
@@ -9,11 +10,10 @@ _sys.path.insert(0, _os.path.abspath(_os.path.join(
 import ast, json, collections, re
 import edgub
 
-print("CHECK 1 — THERE IS NO TABLE. The law is a closed-form expression.\n")
-src = open(_os.path.join(_os.path.dirname(edgub.__file__), "__init__.py")).read()
-law = re.search(r"LAW\s*=\s*'([^']*)'", src).group(1)
-print("   the entire policy, verbatim:")
-print("      %s" % law)
+print("CHECK 1 — NOTHING IS STORED. The law is a closed-form expression.\n")
+law = edgub.LAW   # the ARTEFACT, not a regex over a docstring
+print("   the policy, first 70 chars of %d:" % len(law))
+print("      %s..." % law[:70])
 print("   length: %d characters" % len(law))
 print("   a table over %d observation bits would need %d entries"
       % (len(edgub.BITS), 2 ** len(edgub.BITS)))
@@ -54,3 +54,31 @@ print("""   Every repair this project reports was found by generating candidate
    return its stored answer regardless of the data.
    (That control is in the private engine's repository, not here, because it
    tests the engine law rather than this one.)""")
+
+
+print("\nCHECK 5 — HOW MUCH OF IT A 14-LINE DICT REPRODUCES\n")
+singles = [b for b in edgub.BITS if b != "PASSES"]
+one_to_one = {b: edgub.ACTS[edgub.decide(edgub.sit({b}))] for b in singles}
+print("   single-fault situations : %d" % len(singles))
+print("   mapping 1:1 to one act  : %d  -- all of them" % len(one_to_one))
+for b, a in one_to_one.items():
+    print("      %-12s -> %s" % (b, a))
+def naive(x):
+    if x == 0:
+        return 0
+    return ((x & -x).bit_length() - 1) % 11
+N = 2 ** len(edgub.BITS)
+agree = sum(1 for v in range(N) if edgub.decide(v) == naive(v))
+print("\n   a %d-line dict reproduces every single-fault ruling." % len(singles))
+print("   'lowest set bit mod 11' reproduces %d/%d of the FULL space (%.1f%%),"
+      % (agree, N, 100.0 * agree / N))
+print("   so compound rulings are not that naive rule.")
+print("""
+   BUT: of the ten real toolz bugs, EIGHT were single-fault. The dict would
+   have handled them. And the compound rulings -- the part a dict cannot
+   reproduce -- are the same rulings that scored 0/10 on real repositories.
+
+   So: nothing is stored, and on the cases that occur it behaves as a table.
+   Both are true. The interesting claim is neither of those -- it is that
+   correcting one ACT'S MEANING moved 0/10 to 9/10 with the expression
+   untouched. The act list is separable from the mapping.""")

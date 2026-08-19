@@ -8,8 +8,7 @@ _sys.path.insert(0, _os.path.abspath(_os.path.join(
 import re, itertools, collections
 import edgub
 
-src = open(_os.path.join(_os.path.dirname(edgub.__file__), "__init__.py")).read()
-LAW = re.search(r"LAW\s*=\s*'([^']*)'", src).group(1)
+LAW = edgub.LAW   # the ARTEFACT, not a regex over a docstring
 
 print("=" * 72)
 print("STEP 1 — THE INTERPRETER SPEAKS. Nothing here is a judgement.")
@@ -31,9 +30,9 @@ x = edgub.sit(obs)
 print("\n   situation = %d   (binary %s)" % (x, bin(x)))
 
 print("\n" + "=" * 72)
-print("STEP 3 — THE LAW. This is the whole policy. There is no table.")
+print("STEP 3 — THE LAW. No table is STORED. How much is one functionally: step 4.")
 print("=" * 72)
-print("   %s" % LAW)
+print("   %s..." % LAW[:70])
 print("\n   %d characters of arithmetic." % len(LAW))
 print("   It is compiled once at import and evaluated on the integer above.")
 i = edgub.decide(x)

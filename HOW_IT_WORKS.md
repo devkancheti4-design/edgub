@@ -1,4 +1,4 @@
-# How the law works, and why it is not a lookup table
+# How the law works — and how much of it is a lookup table
 
 ```bash
 python3 proof/realrepo/walkthrough.py
@@ -13,7 +13,7 @@ you run it**. Nothing here is asserted.
 ((((((((((((((((((((((x) & 32766)) & (0 - (((x) & 32766)))))...
 ```
 
-63 characters of integer arithmetic. Compiled once at import, evaluated on one
+**1,513 characters** of integer arithmetic (`len(edgub.LAW)`). Compiled once at import, evaluated on one
 integer. There is no table, no dictionary, no stored case list.
 
 ## One decision, traced
@@ -40,25 +40,38 @@ situation = 128
 **4. Act.** The act does not fix anything by itself. It names *which kind* of
 repair to look for.
 
-## Why that is generalisation, not retrieval
+## How much of it is a lookup table — measured, not argued
+
+An outside reviewer traced the mechanism and called it an error-type → act table
+encoded as arithmetic. **They are substantially right, and here is the number:**
 
 ```
-situations it answers                                    32,768
-events it was authored from                                  11
-proportion of its answers that were ever measured        0.0336%
-stored entries                                                0
-acts reachable                                          11 of 11, none dead
-two-fault situations it rules on and was never
-  authored on                                                91
+single-fault situations                        14
+of those, how many map 1:1 to one act          14   -- all of them
+lines of Python needed to reproduce that       14
+of the ten real toolz bugs, how many were
+  single-fault                                  8   -- the dict handles them
 ```
 
-A table over 15 bits needs 32,768 entries. This stores none, because the answer
-is **computed from the integer**. It was authored from 11 measured events and
-answers 32,757 situations nobody ever showed it — including 91 combinations of
-two simultaneous faults that appear nowhere in its authoring set.
+So in practice a 14-line dictionary reproduces the behaviour that actually
+occurs. The honest split:
 
-The repairs are not stored either. On ten real bugs, **148 candidate edits were
-generated and executed**, and each survivor had to green all 185 tests.
+- **Storage** — 0 entries. True, and uninteresting on its own.
+- **Function on single faults** — a 1:1 map. The reviewer's dict wins.
+- **Function on compound faults** — *not* the naive "lowest set bit" rule; that
+  reproduces only 43.8% of `decide()`. So the expression computes something a
+  simple dict does not.
+
+But that last point only counts for something if the compound rulings are
+*good*, and **on real repositories the shipped act list scored 0 of 10**. So the
+part that is not a table is also the part that has never been shown to earn its
+keep. Both halves of that sentence are ours to own.
+
+What remains true and is worth the reader's time: it was authored from 11
+measured events, it answers every situation without storing any, and correcting
+one act's *meaning* took it from 0/10 to 9/10 with the expression untouched.
+That is a claim about the act list being separable from the mapping — not a
+claim that the mapping is deep.
 
 ## What the decision actually buys: the search collapses
 

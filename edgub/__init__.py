@@ -279,7 +279,19 @@ def repair(act, src, err):
 
 
 def sit(obs):
-    return sum(1 << BITS.index(b) for b in obs if b in BITS)
+    """Pack observations into the law's input.
+
+    RAISES on a name that is not an observation. It used to drop unknown names
+    silently, so sit({"E_IMPORT"}) returned 0, and decide(0) is SHIP -- an
+    unrecognised fault reported "ship the broken code". Failing loud is the only
+    safe behaviour for a policy whose whole job is to read faults."""
+    unknown = sorted(set(obs) - set(BITS))
+    if unknown:
+        raise ValueError("not observations: %s -- known: %s" % (unknown, BITS))
+    if not obs:
+        raise ValueError("empty observation: nothing was observed, which is not "
+                         "the same as the program passing (that is {'PASSES'})")
+    return sum(1 << BITS.index(b) for b in obs)
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +305,9 @@ def observe_traceback(out):
     Mechanical: it reports only exception names the run actually printed, and
     never a judgement about what they mean."""
     o = set()
-    for name, bit in (("NameError", "E_NAME"), ("TypeError", "E_TYPE"),
+    for name, bit in (("ModuleNotFoundError", "E_NAME"),   # an import fault is a
+                      ("ImportError", "E_NAME"),           # NAME that is not bound;
+                      ("NameError", "E_NAME"), ("TypeError", "E_TYPE"),
                       ("IndexError", "E_INDEX"), ("KeyError", "E_INDEX"),
                       ("ZeroDivisionError", "E_ZERO"),
                       ("AttributeError", "E_ATTR"), ("ValueError", "E_VALUE"),

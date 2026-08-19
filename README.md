@@ -94,23 +94,26 @@ git clone https://github.com/devkancheti4-design/edgub && cd edgub
 
 Standard library only. No dependencies.
 
-## Is it a lookup table?
+## How much of it is a lookup table
 
 The commonest reading of this project is that `decide()` is a disguised table of
 memorised answers. `proof/realrepo/not_a_lookup.py` settles it:
 
 ```
-the entire policy               63 characters of arithmetic
-situations it answers           32,768
-events it was authored from     11        (0.034% of them)
-acts reachable                  11 of 11, none dead
-two-fault situations it rules
-on and was never authored on    91
+the policy                      1,513 characters of arithmetic
 entries stored                  0
+single-fault situations         14 -- and ALL 14 map 1:1 to one act
+lines of Python to reproduce
+  the behaviour that occurs     14
+of ten real bugs, single-fault   8
 ```
 
-The repairs are not stored either: on the ten hard bugs, 148 candidate edits
-were generated and each had to green all 185 tests. Nothing is retrieved.
+**A reviewer's 14-line dict reproduces what actually happens.** Storage-wise
+there is no table; functionally, on the cases that occur, there is. The
+expression does compute something a naive dict does not on *compound* faults
+(the "lowest set bit" rule reproduces only 43.8% of it) — but the compound
+rulings are exactly the part that scored 0/10 on real repositories, so that
+extra structure has never been shown to earn anything.
 
 ## Token cost
 
