@@ -1,0 +1,17 @@
+EDGUB'S decide() VERBATIM — only what the acts MEAN is corrected
+
+bug                  observation    act#   authored                   tried
+unique_wrongvar      E_ASSERT+E_TYP 2      -- none --                 6
+groupby_wrongvar     E_ASSERT+E_TYP 2      unwrap call                6
+reduceby_nocontinue  E_ASSERT       7      name no_default->key       32
+partition_alwayspad  E_ASSERT       7      name no_pad->n             9
+sliding_off          E_ASSERT       7      drop arg 1                 88
+itemfilter_swap      E_ASSERT       7      swap tuple 0<->1           3
+merge_with_order     E_ASSERT       7      unwrap call                4
+diff_nodefault       E_ASSERT       7      -- none --                 4001
+join_sides           E_ASSERT       7      swap tuple 0<->1           68
+get_default_inv      E_TYPE         2      -- none --                 21
+
+  edgub's law, acts corrected: 7/10   0 tokens
+
+[exited with code 0]
