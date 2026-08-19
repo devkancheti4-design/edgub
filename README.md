@@ -134,3 +134,26 @@ Two honest qualifications, both in the script's own output:
 - **Zero tokens is not zero cost.** That run evaluated 148 candidate programs,
   each a test-suite execution. On a wide function with weak doctests it is
   minutes of CPU. A token comparison hides this entirely.
+
+## Brain and body: 64.5% fewer tokens, same accuracy
+
+`edgub.decide()` decides; what it cannot repair goes to a frontier model.
+Ten real bugs in `toolz` (185 tests):
+
+```
+                                        repaired    tokens
+brain  edgub.decide, acts corrected        8/10          0
+body   opus 5, the two it cannot reach     2/10     26,630
+TOGETHER                                  10/10     26,630
+opus 5 alone, same ten, batched           10/10     74,964
+
+saved: 48,334 of 74,964 = 64.5%
+```
+
+**Eight of ten free is 80% of cases but only 64.5% of tokens** — the two that
+reach the model are the hard ones. Both remaining failures are the same class:
+restore a deleted `if/else`, which no supplied edit class can express.
+
+Method, the per-bug table, the batching caveat, and the account of the broken
+validator that made an earlier version of this read 9/10:
+[proof/realrepo/BRAIN_AND_BODY.md](proof/realrepo/BRAIN_AND_BODY.md)

@@ -33,7 +33,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", ".."))
 import edgub                      # decide() and BITS used verbatim
 import edits
+from fastcheck import Fast as _Fast
 import harness as F
+import subprocess as _sp
 
 PY = sys.executable
 
@@ -68,6 +70,10 @@ def observe(out):
 
 
 def search(repo, mod, func, classes, tier, cfg, red, keep=12):
+    """Candidates are screened IN PROCESS against the currently-red tests, and
+    only survivors face the full pytest suite. Screening used to spawn a fresh
+    pytest per candidate -- 0.229s of interpreter startup each, 2.5 hours for
+    one function. The bar is unchanged; only the cost of reaching it is."""
     path = os.path.join(repo, mod.replace(".", "/") + ".py")
     src = open(path).read()
     fn = None
@@ -85,6 +91,9 @@ def search(repo, mod, func, classes, tier, cfg, red, keep=12):
     lines = src.splitlines(keepends=True)
     a, b = fn.lineno - 1, fn.end_lineno
     ind = len(lines[a]) - len(lines[a].lstrip())
+    here = os.getcwd()
+    _fast = _Fast(os.path.abspath(repo), mod, func, red)
+    os.chdir(here)
     tried = 0
     for label, mut in edits.mutants(fn, tier=tier, namespace=sorted(set(ns))):
         if not any(label.startswith(c) for c in classes):
@@ -99,18 +108,12 @@ def search(repo, mod, func, classes, tier, cfg, red, keep=12):
             compile(cand, "<c>", "exec")
         except SyntaxError:
             continue
-        open(path, "w").write(cand)
-        try:
-            rr = subprocess.run([PY, "-m", "pytest", "-q", "--tb=no", "-p",
-                                 "no:randomly"] + red, cwd=repo,
-                                capture_output=True, text=True, timeout=90)
-            cheap = "failed" not in (rr.stdout + rr.stderr)
-        except subprocess.TimeoutExpired:
-            cheap = False
-        if cheap:
-            f2, _ = F.run_suite(repo, cfg["ignore"])
-            if f2 == 0:
-                return label, tried
+        if not _fast.ok(body):                     # in-process screen
+            continue
+        open(path, "w").write(cand)                # survivor: the real suite
+        f2, _ = F.run_suite(repo, cfg["ignore"])
+        if f2 == 0:
+            return label, tried
         open(path, "w").write(src)
         if tried > 40000:
             return None, tried
