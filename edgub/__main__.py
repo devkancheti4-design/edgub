@@ -13,9 +13,24 @@ def main():
     ap.add_argument("--max-candidates", type=int, default=40000)
     ap.add_argument("--prompts", action="store_true",
                     help="print the ready-to-send prompt for each unrepaired fault")
+    ap.add_argument("--model", default=None, metavar="NAME",
+                    help="fuse a body: when the algorithm REFUSES it asks this "
+                         "model for the material it named as missing, re-derives, "
+                         "and repeats -- bounded by what asking directly would "
+                         "cost. Without this the run is DATA STARVED: a refusal "
+                         "has nobody to ask and falls through to enumeration.")
+    ap.add_argument("--no-widen", action="store_true",
+                    help="with --model, ask for a fix directly instead of first "
+                         "asking for material")
     a = ap.parse_args()
     from .discover import EnvironmentProblem
     try:
+        if a.model:
+            from .fuse import fuse, Anthropic
+            rz = fuse(Anthropic(a.model), widen=not a.no_widen)
+            rep = rz.fix(a.repo, package=a.package, apply=not a.dry_run)
+            print(rep)
+            return 0 if not rep.unfixed else 1
         rep = _fix(a.repo, package=a.package, apply=not a.dry_run,
                    max_candidates=a.max_candidates)
     except EnvironmentProblem as e:
