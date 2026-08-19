@@ -23,6 +23,23 @@ from .acts import ROUTES, SEMANTIC
 from . import edits as _edits
 from .screen import Fast
 from . import discover as _d
+from .pipeline import solve as _infer
+from .memory import Memory as _Memory
+from .discover import EnvironmentProblem as _EnvProblem
+
+
+def _trial(repo, args):
+    """Run the suite while a CANDIDATE is spliced in.
+
+    A candidate can break the module at import time, and pytest then reports a
+    collection error -- exit 2, no verdict. That is a fact about the CANDIDATE,
+    not about the environment, so it must reject the candidate rather than
+    abort the whole run. The baseline call still raises: there, no verdict
+    really does mean the environment is unusable."""
+    try:
+        return _d.run_tests(repo, args)[0]
+    except _EnvProblem:
+        return 10 ** 6
 
 
 @dataclass
@@ -84,6 +101,35 @@ def _prompt(repo, mod, func, out, act):
             % (out[:1500], func, mod.replace(".", os.sep) + ".py", body[:2500]))
 
 
+def _blast_radius(orig, cand, lo, hi):
+    """How far outside the target function did this candidate reach?
+
+    Candidates are produced with ast.unparse, which regenerates source from the
+    tree and DISCARDS EVERY COMMENT and normalises quoting. If the spliced
+    region is wrong by even a line, the result is a rewritten file that still
+    passes the tests -- which is what happened to tabulate: 294 insertions,
+    1,397 deletions, reported as "1 repaired". A green suite is not evidence
+    that nothing was destroyed."""
+    a, b = orig.splitlines(), cand.splitlines()
+    if a[:lo] != b[:lo]:
+        return "text above the target function changed"
+    tail_a, tail_b = a[hi:], b[len(b) - len(a[hi:]):]
+    if tail_a != tail_b:
+        return "text below the target function changed"
+    # Comments INSIDE the target function are unavoidably lost: candidates are
+    # produced with ast.unparse, which does not carry them. That is a real cost
+    # and it is reported, but it must not veto the repair -- counting comments
+    # across the whole file rejected every candidate for any function that
+    # contained one, which is why partition could not be repaired through the
+    # product while the same inference worked standalone.
+    out_a = a[:lo] + a[hi:]
+    out_b = b[:lo] + b[len(b) - len(a[hi:]):]
+    lost = "\n".join(out_a).count("#") - "\n".join(out_b).count("#")
+    if lost > 0:
+        return "%d comment(s) removed OUTSIDE the target function" % lost
+    return None
+
+
 def _splice(path, func, body):
     src = open(path).read()
     fn = None
@@ -130,6 +176,7 @@ def repair(repo=".", package=None, pytest_args=(), max_candidates=40000,
         work = os.path.join(work, "r")
 
     tried_targets = set()
+    mem = _Memory()
     baseline, _b = _d.run_tests(work, pytest_args)
     for _ in range(64):
         failed, out = _d.run_tests(work, pytest_args)
@@ -138,6 +185,7 @@ def repair(repo=".", package=None, pytest_args=(), max_candidates=40000,
         baseline = failed
         red = _d.failing_nodes(out)
         obs = observe_traceback(out)
+        baseline = failed
         act_i = decide(sit(obs))
         act = ACTS[act_i]
         classes, tier = ROUTES.get(act_i, (SEMANTIC, 3))
@@ -150,10 +198,58 @@ def repair(repo=".", package=None, pytest_args=(), max_candidates=40000,
                 "an environment or packaging failure, not a code defect",
                 ""))
             break
-        got = None
         tg = [t for t in tg if t not in tried_targets]
         if not tg:
             break
+
+        # ------------------------------------------------------------------
+        # INFERENCE FIRST. The body's examples say what the function must do;
+        # generalise the repair from them. Enumeration is the LAST resort, not
+        # the first -- it is what made this slow, what rewrote a file in
+        # tabulate by greening a suite accidentally, and what could never reach
+        # a missing branch at all.
+        # ------------------------------------------------------------------
+        done = False
+        for mod, func in tg[:3]:
+            try:
+                desc, cands, route, el = _infer(work, mod, func, red, mem=mem)
+            except Exception:
+                desc, cands = None, None
+            if not cands:
+                continue
+            path = os.path.join(work, mod.replace(".", os.sep) + ".py")
+            src0 = open(path).read()
+            fn0 = next((n for n in ast.walk(ast.parse(src0))
+                        if isinstance(n, ast.FunctionDef) and n.name == func), None)
+            if fn0 is None:
+                continue
+            lines0 = src0.splitlines(keepends=True)
+            for k, (cand_src, arm) in enumerate(cands, 1):
+                whole = ("".join(lines0[:fn0.lineno - 1]) + cand_src + "\n"
+                         + "".join(lines0[fn0.end_lineno:]))
+                harm = _blast_radius(src0, whole, fn0.lineno - 1, fn0.end_lineno)
+                if harm:
+                    continue
+                open(path, "w").write(whole)
+                f2 = _trial(work, pytest_args)
+                if f2 < baseline:
+                    rep.repaired.append(Repaired(
+                        ", ".join(red[:2]), mod, func,
+                        "INFER/" + route, arm, k, _diff(src0, whole)))
+                    mem.learn(_Memory.signature({"E_ASSERT"}, "REPAIR_LIBRARY",
+                              {"kind": desc.get("kind", "missing_branch"),
+                               "keyword": desc["branch_on"]}),
+                              "missing_branch", desc, el)
+                    tried_targets.add((mod, func))
+                    done = True
+                    break
+                open(path, "w").write(src0)
+            if done:
+                break
+        if done:
+            continue
+
+        got = None
         for mod, func in tg[:3]:
             rel = _d.relevant(work, out, func)
             got = _search(work, mod, func, classes, tier, rel, pytest_args,
@@ -214,10 +310,15 @@ def _search(repo, mod, func, classes, tier, red, pytest_args, cap, verbose,
         if not screen.ok(body):
             continue
         os.chdir(here)
+        before = open(path).read()
         cand, orig = _splice(path, func, body)
         if cand is None:
             continue
-        failed, _ = _d.run_tests(repo, pytest_args)
+        harm = _blast_radius(before, cand, fn.lineno - 1, fn.end_lineno)
+        if harm:                          # a green suite is not a licence to damage
+            open(path, "w").write(orig)
+            continue
+        failed = _trial(repo, pytest_args)
         if failed < baseline:            # fixed something, broke nothing
             return label, tried, _diff(orig, cand)
         open(path, "w").write(orig)

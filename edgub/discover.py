@@ -41,7 +41,7 @@ class EnvironmentProblem(RuntimeError):
     error, an import failure. NOT the same as 'everything passed'."""
 
 
-def run_tests(repo, extra=()):
+def run_tests(repo, extra=(), timeout=300):
     """Run the suite and return (failures, output).
 
     Raises EnvironmentProblem when the run produced no verdict at all. It used
@@ -49,9 +49,15 @@ def run_tests(repo, extra=()):
     passes' -- a debugging tool telling a user their broken repository is fine.
     pytest's exit codes: 0 all passed, 1 tests failed, 2 interrupted,
     3 internal error, 4 usage error, 5 nothing collected."""
-    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=native",
-                        "-p", "no:randomly"] + list(extra), cwd=repo,
-                       capture_output=True, text=True, timeout=1800)
+    try:
+        r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=native",
+                            "-p", "no:randomly"] + list(extra), cwd=repo,
+                           capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # A candidate can loop forever -- swapping < for <= in a while
+        # condition is enough. A repair that hangs the suite is not a repair;
+        # report it as failing rather than letting it hang the tool.
+        return 10 ** 6, "TIMEOUT: the suite did not finish in %ds" % timeout
     out = r.stdout + r.stderr
     m = re.search(r"(\d+) failed", out)
     passed = re.search(r"(\d+) passed", out)
