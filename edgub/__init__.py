@@ -345,3 +345,19 @@ def target_file(out, root=None, package=None):
             continue
         best = (path, line)
     return best
+
+
+# --------------------------------------------------------------- the product
+def fix(*a, **kw):
+    """Repair a repository from its own failing tests.
+
+    Named `fix`, not `repair`: `repair(act, src, err)` above is the low-level
+    single-act transform and has been public since the first release. Exporting
+    the product under the same name silently broke it.
+
+        import edgub
+        report = edgub.fix(".")            # discovers the package and the tests
+        print(report)
+    """
+    from .repair import repair as _r
+    return _r(*a, **kw)

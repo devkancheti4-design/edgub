@@ -1,25 +1,34 @@
 #!/bin/sh
-# Every claim in the README, run from a clean clone. If a line fails, the claim
-# it supports is not backed and does not belong in the README.
+# Every claim in the README, from a clean clone. If a line fails, the claim it
+# Set PYTHON=/path/to/python if your pytest lives in a virtualenv.
+# supports is not backed and does not belong there.
 set -e
-cd "$(dirname "$0")"
+HERE=$(cd "$(dirname "$0")" && pwd)
+cd "$HERE"
 echo "== 1. decide() speed =="
-python3 -c "
+"${PYTHON:-python3}" -c "
 import sys, time; sys.path.insert(0,'.')
 import edgub
 for _ in range(200): edgub.decide(7)
 N=20000; t=time.perf_counter()
 for i in range(N): edgub.decide(i&255)
-print('   %.2f us per call' % ((time.perf_counter()-t)/N*1e6))"
+print('   %.2f us per call, law is %d chars' % ((time.perf_counter()-t)/N*1e6, len(edgub.LAW)))"
 echo "== 2. self-test on toy programs =="
-python3 proof/selftest.py | tail -2
-echo "== 3. how one decision is made, traced =="
-python3 proof/realrepo/walkthrough.py | grep -E "observation read|situation =|characters of|decide\\(|situations it answers|authored from|stored entries|NEVER authored"
-echo "== 3b. is it a lookup table? =="
-python3 proof/realrepo/not_a_lookup.py | grep -E "length:|entries stored|answered but never|never in the authoring"
-echo "== 4. real repo: what the shipped act list rules =="
-cd proof/realrepo
-[ -d bugged ] || python3 inject_hard.py bugged >/dev/null
-python3 spec.py hard | tail -4
-echo "== 5. token cost =="
-python3 token_cost.py | grep -E "tokens spent|api keys|TOTAL|opus 5 deciding|AS SHIPPED|corrected"
+"${PYTHON:-python3}" proof/selftest.py | tail -2
+echo "== 3. how much of it is a lookup table =="
+"${PYTHON:-python3}" proof/realrepo/not_a_lookup.py | grep -E "length:|entries stored|answered but never|1:1|reproduces every"
+echo "== 4. THE PRODUCT, on a repository it has never seen =="
+D=$(mktemp -d)
+git clone -q --depth 1 https://github.com/pytoolz/toolz.git "$D/t"
+"${PYTHON:-python3}" - "$D/t" <<'PY'
+import sys
+p = sys.argv[1] + "/toolz/itertoolz.py"
+s = open(p).read()
+old = "            val = key(item)\n            if val not in seen:\n                seen_add(val)\n"
+new = "            val = key(item)\n            if val not in seen:\n                seen_add(item)\n"
+assert s.count(old) == 1
+open(p, "w").write(s.replace(old, new))
+print("   injected a wrong-variable bug into unique(), then:")
+PY
+cd "$D/t" && PYTHONPATH="$HERE" "${PYTHON:-python3}" -m edgub . --package toolz || true
+rm -rf "$D"

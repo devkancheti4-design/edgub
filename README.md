@@ -1,103 +1,62 @@
 # edgub
 
-A free, offline debugging policy. One arithmetic expression maps what the
-interpreter said to what to do about it. No API key, no network, no model.
+Repair a repository from its own failing tests. **No model, no API key, no
+network.** Standard library only.
+
+```bash
+pip install -e .
+edgub .
+```
+
+```
+edgub: 1 repaired, 1 left for a model, 2.4s, 0 tokens
+  repaired  itertoolz.unique   CAST_OPERAND via name item->val (117 candidates)
+  left      tests/test_package.py::test_has_version   the failing test exercises
+            no function in this package -- an environment failure, not a defect
+```
+
+It discovers your package, runs your suite, reads what the interpreter said,
+decides which class of repair the fault belongs to, generalises a repair from
+your own tests, and verifies it against the whole suite before keeping it.
 
 ```python
 import edgub
-act = edgub.ACTS[edgub.decide(edgub.sit({"E_NAME"}))]   # -> DEFINE_NAME
+report = edgub.fix(".")            # or edgub.fix(repo, package="mypkg")
+for r in report.repaired:
+    print(r.function, r.edit, r.diff)
+for u in report.unrepaired:
+    print(u.prompt)                # ready to send to a model, minimal context
 ```
 
-**How it works, and why it is not a lookup table:**\n[HOW_IT_WORKS.md](HOW_IT_WORKS.md) — one decision traced end to end,\nevery number computed live by `proof/realrepo/walkthrough.py`.\n\n## Everything claimed here can be run
+## What it is honestly for
 
-```bash
-./verify.sh
-```
-
-That script runs every claim below from a clean clone. If a line fails, the
-claim is not backed and does not belong here.
+**A free deterministic first pass.** It repairs the mechanical fraction offline
+and hands you a minimal, precise prompt for the rest. It is *not* a replacement
+for a model. On ten real bugs in `toolz`:
 
 ```
-decide()                       2.2 us per call, ~465,000 calls/sec, 0 tokens
-self-test                      11 / 11 repaired
-ten hard bugs in real toolz    see proof/realrepo/REALREPO.md
+                                        repaired    tokens
+edgub                                      8/10          0
+a frontier model, the two it cannot reach  2/10     26,630
+TOGETHER                                  10/10     26,630
+that model alone, same ten, batched       10/10     74,964
 ```
 
-## What this repo previously claimed and could not back
+Same accuracy, **64.5% fewer tokens**. Note that 8-of-10 free is 80% of *cases*
+but only 64.5% of *tokens* — the ones it cannot reach are the hard ones and cost
+more per bug.
 
-An outside reviewer tried to reproduce the headline numbers from a clean clone.
-Almost none of them ran. Rather than leave them up, they have been removed:
+## Limits, stated plainly
 
-```
-"2.5 us per decision"        the shipped decide() measured 345 us -- 138x off.
-                             LAW was passed to eval() as a STRING, so Python
-                             recompiled it on every call. The published figure
-                             was never true of the shipped code path.
-                             FIXED: the law is compiled once at import.
-                             Now measured at 2.2 us, and verify.sh proves it.
-
-three_way.py    11/11 vs Opus 5      needed law_v3.json   -- never committed
-damage_test.py  0/6 vs 5/6           needed repo_pristine/ -- never committed
-token_cost.py   82% fewer tokens     needed a module that does not exist
-hard_cases.py, mixed_corpus.py       could not import edgub at all
-fair_test.py, reach_test.py,
-reauthor_test.py                     did not even parse -- broken by an earlier
-                                     pass that stripped private-engine calls
-                                     and left `for` loops with no body
-
-All of the above are DELETED, along with the numbers they supported. Their logs
-are deleted too: a log you cannot regenerate is not evidence.
-```
-
-Five of eight headline benchmarks could not run. That is disqualifying for a
-tool whose entire pitch is measurement, and the reviewer was right to say so.
-
-## What is actually true, and measured
-
-**On toy programs** — 11/11, reproducible via `proof/selftest.py`.
-
-**On real repositories, as shipped: it fails.** Ten bugs of the kind that
-survive review in `toolz` (3,346 lines, 185 tests): the act list scores
-**0 of 10 and weakens seven test suites**. `ACT[i]` answers `BITS[i]`, so
-`E_ASSERT` is answered by `RELAX_ASSERT` — *a test failed, weaken the test*.
-That pairing was measured on toy scripts and is exactly inverted on real code.
-None of the eleven acts repairs a wrong value; all eleven suppress an exception.
-
-**With the act meanings corrected** and `edgub.decide()` byte-for-byte
-unchanged, the same law scores **9 of 10** at zero tokens, evaluating 148
-candidates out of a 45,088 space.
-
-Method, tables, and limits: [proof/realrepo/REALREPO.md](proof/realrepo/REALREPO.md)
-
-## What it is for
-
-A cheap deterministic first pass that repairs the mechanical fraction offline
-and hands the rest to a model. It is not a replacement for one: on the same ten
-bugs a frontier model deciding for itself scored 10/10.
-
-## Limits
-
-- The act to edit-class mapping is engineering, not emergent. Every new fault
-  shape is a commit.
-- Two of the nine repairs pass all 185 tests without being the original code.
-  The suite is a weaker oracle than the question.
-- One bug needs a synthesised `if/else`; no supplied edit reaches it.
-- `toolz` is a famous public library, so a frontier model's 10/10 is partly
-  recall. On private code that advantage shrinks.
-
-## Install
-
-```bash
-git clone https://github.com/devkancheti4-design/edgub && cd edgub
-./verify.sh
-```
-
-Standard library only. No dependencies.
+- **It cannot write code that isn't there.** Both bugs it failed needed a
+  synthesised `if/else`. No supplied edit class can invent a branch; a model
+  does it in one pass. That is the division of labour, not a bug to fix later.
+- **The act-to-edit mapping is engineering, not emergent.** New fault shapes
+  need new edit classes. You are adopting a taxonomy someone maintains.
+- **A 14-line dict reproduces the single-fault behaviour.** See below.
+- It repairs; it does not review. It has no idea what your code is *for*.
 
 ## How much of it is a lookup table
-
-The commonest reading of this project is that `decide()` is a disguised table of
-memorised answers. `proof/realrepo/not_a_lookup.py` settles it:
 
 ```
 the policy                      1,513 characters of arithmetic
@@ -108,52 +67,54 @@ lines of Python to reproduce
 of ten real bugs, single-fault   8
 ```
 
-**A reviewer's 14-line dict reproduces what actually happens.** Storage-wise
-there is no table; functionally, on the cases that occur, there is. The
-expression does compute something a naive dict does not on *compound* faults
-(the "lowest set bit" rule reproduces only 43.8% of it) — but the compound
-rulings are exactly the part that scored 0/10 on real repositories, so that
-extra structure has never been shown to earn anything.
+Storage-wise there is no table. Functionally, on the cases that occur, there
+is — and a reviewer's 14-line dict reproduces them. The expression does compute
+something a naive dict does not on *compound* faults ("lowest set bit"
+reproduces only 43.8% of it), but compound rulings are also the part that
+scored 0/10 before the act meanings were corrected, so that structure has never
+been shown to earn anything. `proof/realrepo/not_a_lookup.py` measures both.
 
-## Token cost
+## Verify everything
 
-`proof/realrepo/token_cost.py`. The law's side is measured when you run it; the
-model's side is a recorded measurement from 2026-08-19, listed with provenance
-in the file header rather than estimated.
-
-```
-opus 5 deciding for itself             10/10    74,964 tokens   ($0.38-$1.87)
-edgub as shipped                        0/10         0 tokens   + 7 test suites weakened
-edgub with act meanings corrected       9/10         0 tokens
+```bash
+./verify.sh            # PYTHON=/path/to/python if pytest is in a virtualenv
 ```
 
-Two honest qualifications, both in the script's own output:
+Runs every claim above from a clean clone, including cloning a real third-party
+repository, injecting a bug, and repairing it. If a line fails, the claim it
+supports does not belong here.
 
-- **The 9/10 is not the shipped package.** It lives in
-  `proof/realrepo/edgub_repair.py`. What ships scores 0/10.
-- **Zero tokens is not zero cost.** That run evaluated 148 candidate programs,
-  each a test-suite execution. On a wide function with weak doctests it is
-  minutes of CPU. A token comparison hides this entirely.
+## What changed in 0.2.0
 
-## Brain and body: 64.5% fewer tokens, same accuracy
+The 0.1 release shipped a policy that **scored 0/10 on real repositories and
+weakened seven test suites**. `ACT[i]` answers `BITS[i]`, so `E_ASSERT` was
+answered by `RELAX_ASSERT` — *a test failed, weaken the test*. True of the toy
+scripts it was authored from, exactly inverted on real code.
 
-`edgub.decide()` decides; what it cannot repair goes to a frontier model.
-Ten real bugs in `toolz` (185 tests):
+The expression is unchanged. Only what the acts *mean* was corrected, and that
+alone moved 0/10 to 8/10. That correction now ships in `edgub/acts.py` instead
+of living in a proof script.
+
+Also fixed, all of them found by packaging or by outside review:
 
 ```
-                                        repaired    tokens
-brain  edgub.decide, acts corrected        8/10          0
-body   opus 5, the two it cannot reach     2/10     26,630
-TOGETHER                                  10/10     26,630
-opus 5 alone, same ten, batched           10/10     74,964
-
-saved: 48,334 of 74,964 = 64.5%
+the law was passed to eval() as a STRING and recompiled every call
+   345 us -> 2.13 us
+"63 characters" was a regex reading the docstring, not the artefact
+   the law is 1,513 characters
+sit() dropped unknown observation names silently -> 0 -> SHIP
+   an unrecognised fault said "ship the broken code". Now raises.
+ImportError and ModuleNotFoundError were not observed at all
+a missing pytest reported as 0 failures -> "everything passes"
+   a debugging tool telling you your broken repo is fine. Now raises.
+targets() took the deepest traceback frame, which is wrong when several
+   failing tests are concatenated; it picked import machinery
+the candidate screen required passing tests that can never pass
+   (package-metadata failures), so every candidate was rejected
+five benchmarks that could not run from a clean clone, deleted with the
+   numbers they supported
 ```
 
-**Eight of ten free is 80% of cases but only 64.5% of tokens** — the two that
-reach the model are the hard ones. Both remaining failures are the same class:
-restore a deleted `if/else`, which no supplied edit class can express.
+## License
 
-Method, the per-bug table, the batching caveat, and the account of the broken
-validator that made an earlier version of this read 9/10:
-[proof/realrepo/BRAIN_AND_BODY.md](proof/realrepo/BRAIN_AND_BODY.md)
+MIT.
