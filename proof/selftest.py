@@ -4,6 +4,9 @@ Proves the shipped law routes eleven real failures correctly, by RUNNING each
 broken program, reading its traceback, asking the law, applying the repair and
 running again.
 """
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.abspath(_os.path.join(
+    _os.path.dirname(_os.path.abspath(__file__)), "..", "..")))
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import edgub

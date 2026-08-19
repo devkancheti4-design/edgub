@@ -24,6 +24,9 @@ and each one routes to the edit classes appropriate to its fault:
 If the law generalises, the same decide() that produced seven test-weakenings
 now routes seven semantic bugs into a semantic repair search.
 """
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.abspath(_os.path.join(
+    _os.path.dirname(_os.path.abspath(__file__)), "..", "..", "..")))
 import os, re, sys, ast, json, shutil, subprocess, time, itertools
 
 HERE = os.path.dirname(os.path.abspath(__file__))

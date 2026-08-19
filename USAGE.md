@@ -7,7 +7,7 @@ git clone https://github.com/<you>/edgub && cd edgub
 pip install -e .
 ```
 
-No dependencies beyond the standard library. No API key. No network.
+No dependencies beyond the standard library.
 
 ## Run it on a failing test
 

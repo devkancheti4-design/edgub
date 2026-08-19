@@ -5,8 +5,14 @@ boundary, or on a branch only some callers take, or using the wrong one of two
 variables that are equal most of the time.
 """
 import os, shutil, sys, json
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                   "..", "realrepo", "toolz-origin")
+HERE = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(HERE, "toolz-origin")
+
+if not os.path.isdir(SRC):                 # fetch the corpus rather than assume it
+    import subprocess
+    print("cloning toolz (the corpus these bugs are injected into)...")
+    subprocess.run(["git", "clone", "-q", "--depth", "1",
+                    "https://github.com/pytoolz/toolz.git", SRC], check=True)
 
 BUGS = [
  ("unique_wrongvar", "toolz/itertoolz.py",

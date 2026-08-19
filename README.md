@@ -1,165 +1,95 @@
 # edgub
 
-A debugger whose repair policy is **one arithmetic expression**, authored by a
-program-synthesis engine from events measured by running — not written by a
-human, not a model call.
-
-```
-read the traceback  ->  extract the syntax at the failing line
-                    ->  the authored law returns one of eleven repairs
-                    ->  apply it to the AST  ->  run the tests again
-```
-
-**2.5 microseconds per decision. Zero tokens. No network. No model.**
-
----
-
-## The result nobody measures: damage
-
-Almost every debugging benchmark hands you a broken program and asks if you
-fix it. **A real repository is mostly working code.** Six real source modules
-of a project whose 56 tests all pass, each handed to a model-only debugger with
-the framing such a debugger actually uses — *"the suite is failing, review this
-file and return the corrected version"*:
-
-```
-working file (suite is GREEN)     lines   brain-first        model-only
-proven_reason/reasoner.py           381   SHIP (0 tokens)    changed -> BROKE suite
-proven_reason/render.py             179   SHIP (0 tokens)    changed -> BROKE suite
-proven_reason/catalog.py            123   SHIP (0 tokens)    left alone
-proven_reason/models.py             198   SHIP (0 tokens)    changed -> BROKE suite
-proven_reason/engine.py             334   SHIP (0 tokens)    changed -> BROKE suite
-proven_reason/evaluator.py          197   SHIP (0 tokens)    changed -> BROKE suite
-
-  DAMAGE     brain-first  0 / 6      model-only  5 / 6
-  TOKENS     brain-first  0          model-only  17,406
-```
-
-**Five of six working files were rewritten into a broken state.** edgub sent
-nothing and touched nothing, because it asks a cheaper question first: *did
-this file fail?*
-
-At scale, on a 1,000-program corpus shaped like a real repo (472 already
-correct, 528 broken):
-
-```
-  finished with NO model call   748  (74.8%)
-  working code it broke           0  (0.00%)
-  tokens        78,361  ->  13,817     (82% less)
-```
-
-**This is not the law reasoning better.** It has no opinion about how code
-should look, so it cannot be tempted to improve it — a structural property,
-not intelligence, and worth more than intelligence on the three quarters of a
-repository that is not broken. A frontier model has the same failure: given
-code that only *looked* wrong, Opus 5 broke it too.
-
-Full method, logs, and everything this does **not** show:
-[`proof/benchmark/DAMAGE.md`](proof/benchmark/DAMAGE.md).
-
-## Where it stands against a frontier model
-
-**It ties, it loses, and it wins — depending on the task.** All three are
-measured, with ground truth found by execution:
-
-| test | the law | law + a free local 7B | a frontier model | verdict |
-|---|---|---|---|---|
-| routing a failure to the right repair (14) | **11/11** | — | 11/11 | **tie** |
-| repairing ordinary bugs (8) | **3/8** | 8/8 | 8/8 | **loses alone, ties paired** |
-| hard traps — misleading frames, shadowed builtins, late binding (8) | — | **8/8** | 7/8 | **wins** |
-| a real repository, 5 injected faults | **1/5** | — | — | **loses** |
-
-**The law alone is not a debugger** — 3/8 once a repair needs content it
-cannot invent, and 1/5 on real code where its repairs are too shallow.
-
-**Paired with a free local model it matches a frontier model**, at 2.2x the
-speed and no cost, because the law decides *what* to do and the model only
-supplies *content*.
-
-**On the hard set it beats a frontier model**, and for one structural reason:
+A free, offline debugging policy. One arithmetic expression maps what the
+interpreter said to what to do about it. No API key, no network, no model.
 
 ```python
-def apply(items, factor):
-    return [scale(factor, i) for i in items]   # already correct
+import edgub
+act = edgub.ACTS[edgub.decide(edgub.sit({"E_NAME"}))]   # -> DEFINE_NAME
 ```
 
-That looks like transposed arguments. Opus 5 transposed them and broke it. The
-7B did the same. The law observed `PASSES` and returned `SHIP` — it has no
-opinion about how code should look, and reacts only to what happened.
+## Everything claimed here can be run
 
-Full numbers, methods, logs and everything that would make them wrong:
-[`proof/benchmark/BENCHMARK.md`](proof/benchmark/BENCHMARK.md).
+```bash
+./verify.sh
+```
 
-## The result that matters
+That script runs every claim below from a clean clone. If a line fails, the
+claim is not backed and does not belong here.
 
-Fourteen broken programs. Both sides saw the same traceback and chose from the
-same eleven repairs. Ground truth was measured by execution — the repair that
-actually made the program produce the expected output. Opus 5's answers were
-sealed in source before the ground truth was computed.
+```
+decide()                       2.2 us per call, ~465,000 calls/sec, 0 tokens
+self-test                      11 / 11 repaired
+ten hard bugs in real toolz    see proof/realrepo/REALREPO.md
+```
 
-| | routing accuracy | cost per decision |
-|---|---|---|
-| **the authored law** | **11 / 11** | **2.5 µs, 0 tokens** |
-| Opus 5 (frontier model) | **11 / 11** | ~1–3 s, ~600 tokens |
+## What this repo previously claimed and could not back
 
-Identical choices on every case, including a nested `int(str(x) + 'z')`, a
-subscript on a list built inside a comprehension, and a free name in a nested
-function scope.
+An outside reviewer tried to reproduce the headline numbers from a clean clone.
+Almost none of them ran. Rather than leave them up, they have been removed:
 
-Three further cases were excluded because **no repair in the act set works** —
-neither side could route them. Same wall for both.
+```
+"2.5 us per decision"        the shipped decide() measured 345 us -- 138x off.
+                             LAW was passed to eval() as a STRING, so Python
+                             recompiled it on every call. The published figure
+                             was never true of the shipped code path.
+                             FIXED: the law is compiled once at import.
+                             Now measured at 2.2 us, and verify.sh proves it.
 
-## What else was measured
+three_way.py    11/11 vs Opus 5      needed law_v3.json   -- never committed
+damage_test.py  0/6 vs 5/6           needed repo_pristine/ -- never committed
+token_cost.py   82% fewer tokens     needed a module that does not exist
+hard_cases.py, mixed_corpus.py       could not import edgub at all
+fair_test.py, reach_test.py,
+reauthor_test.py                     did not even parse -- broken by an earlier
+                                     pass that stripped private-engine calls
+                                     and left `for` loops with no body
 
-| test | result |
-|---|---|
-| unseen programs — new names, shapes, call sites | **8 / 8** repaired |
-| unseen *domains* — classes, generators, `os.path`, parsing, config | **6 / 8** |
-| faults outside the act set, using `REAUTHOR_BODY` on the repo's tests | **4 / 6** |
-| closed loop: fail → measure → re-author → retry | **10 / 10**, 3 successors, **0 regressions** |
-| a real repository (`proven-reason`, 56 tests) | **1 / 5** — see limits |
+All of the above are DELETED, along with the numbers they supported. Their logs
+are deleted too: a log you cannot regenerate is not evidence.
+```
 
-Full numbers, methods and the failures: [`proof/PROOF.md`](proof/PROOF.md).
+Five of eight headline benchmarks could not run. That is disqualifying for a
+tool whose entire pitch is measurement, and the reviewer was right to say so.
 
-## Honest limits
+## What is actually true, and measured
 
-- **The repairs are the weak half, not the routing.** On a real repository the
-  law chose the right act in 3 of 3 cases where the traceback was read
-  correctly, but only 1 of 3 repairs actually restored behaviour.
-  `DEFINE_NAME` binds a missing name to `0` — which silences a `NameError`
-  and leaves `DEFAULT_GRAMMAR = Grammar()` still broken.
-- **It cannot invent a repair.** A wrong operator, an off-by-one or a missing
-  return has no act, and re-authoring cannot learn one. `REAUTHOR_BODY` closes
-  part of this gap by authoring a new function body from the repo's tests —
-  4 of 6 — but only for functions of their arguments returning integers.
-- **It will report `SHIP` on a program it has not fixed** when the failure is
-  a wrong result rather than an exception. Do not run it unsupervised.
-- The act set covers eight fault families. Anything outside them is not
-  handled and will not be learned.
+**On toy programs** — 11/11, reproducible via `proof/selftest.py`.
 
-## Attribution
+**On real repositories, as shipped: it fails.** Ten bugs of the kind that
+survive review in `toolz` (3,346 lines, 185 tests): the act list scores
+**0 of 10 and weakens seven test suites**. `ACT[i]` answers `BITS[i]`, so
+`E_ASSERT` is answered by `RELAX_ASSERT` — *a test failed, weaken the test*.
+That pairing was measured on toy scripts and is exactly inverted on real code.
+None of the eleven acts repairs a wrong value; all eleven suppress an exception.
 
-The **law** is the engine's, verbatim. The traceback reader, the AST
-transformations and this packaging are ordinary engineering around it.
-The engine itself is private and is not part of this repository.
+**With the act meanings corrected** and `edgub.decide()` byte-for-byte
+unchanged, the same law scores **9 of 10** at zero tokens, evaluating 148
+candidates out of a 45,088 space.
 
-Licence: Apache-2.0.
+Method, tables, and limits: [proof/realrepo/REALREPO.md](proof/realrepo/REALREPO.md)
 
-## On real repositories
+## What it is for
 
-Ten bugs of the kind that survive review, in `toolz` (3,346 lines, 185 tests).
+A cheap deterministic first pass that repairs the mechanical fraction offline
+and hands the rest to a model. It is not a replacement for one: on the same ten
+bugs a frontier model deciding for itself scored 10/10.
 
-As shipped, the act list scores **0 of 10 and weakens seven test suites** —
-`ACT[i]` answers `BITS[i]`, so `E_ASSERT` is answered by `RELAX_ASSERT`:
-*a test failed, weaken the test*. That pairing was measured on toy scripts and
-is exactly inverted on real code, where the test is right and the library is
-wrong. None of the eleven acts repairs a wrong value; all eleven suppress an
-exception.
+## Limits
 
-With `edgub.decide()` **byte-for-byte unchanged** and only the *meaning* of the
-acts corrected — repair the library rather than suppress the symptom — the same
-law scores **9 of 10**, at zero tokens, evaluating 148 candidates out of a
-45,088 space.
+- The act to edit-class mapping is engineering, not emergent. Every new fault
+  shape is a commit.
+- Two of the nine repairs pass all 185 tests without being the original code.
+  The suite is a weaker oracle than the question.
+- One bug needs a synthesised `if/else`; no supplied edit reaches it.
+- `toolz` is a famous public library, so a frontier model's 10/10 is partly
+  recall. On private code that advantage shrinks.
 
-Full method, the damage table, the narrowing measurement, and the limits:
-[proof/realrepo/REALREPO.md](proof/realrepo/REALREPO.md)
+## Install
+
+```bash
+git clone https://github.com/devkancheti4-design/edgub && cd edgub
+./verify.sh
+```
+
+Standard library only. No dependencies.

@@ -3,6 +3,9 @@ act 2 may now reach `name`, `cmp`, `attr`; and my 4,001 candidate cap is gone.
 
 If they resolve, the attribution is settled by measurement: they were mine.
 """
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.abspath(_os.path.join(
+    _os.path.dirname(_os.path.abspath(__file__)), "..", "..", "..")))
 import sys, os, json, shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import edgub_repair as R

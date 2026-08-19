@@ -8,6 +8,9 @@ This file only computes, per bug: the mechanical observation, the act the law
 names, and the target the run itself points at. It writes those out as the
 body's instructions.
 """
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.abspath(_os.path.join(
+    _os.path.dirname(_os.path.abspath(__file__)), "..", "..", "..")))
 import os, re, sys, ast, json, subprocess, collections
 
 HERE = os.path.dirname(os.path.abspath(__file__))

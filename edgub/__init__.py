@@ -17,9 +17,18 @@ What ships here is what it wrote.
 LAW = '((((((((((((((((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) - (((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) >> 1) & 1431655765))) & 858993459) + (((((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) - (((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) >> 1) & 1431655765))) >> 2) & 858993459))) + (((((((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) - (((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) >> 1) & 1431655765))) & 858993459) + (((((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) - (((((((((x) & 32766)) & (0 - (((x) & 32766))))) - 1)) >> 1) & 1431655765))) >> 2) & 858993459))) >> 4)) & 252645135))) * 16843009)) >> 24) & 15) - 3) + (3 | (((((((((((((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) - ((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) >> 1) & 1431655765))) & 858993459) + ((((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) - ((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) >> 1) & 1431655765))) >> 2) & 858993459))) + ((((((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) - ((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) >> 1) & 1431655765))) & 858993459) + ((((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) - ((((((((((x + 32766)) & 32766)) & (0 - ((((x + 32766)) & 32766))))) - 1)) >> 1) & 1431655765))) >> 2) & 858993459))) >> 4)) & 252645135))) * 16843009)) >> 24) & 15)))'
 
 
+_LAW_CODE = compile(LAW, "<law>", "eval")   # compiled ONCE, not per call
+_EMPTY = {"__builtins__": {}}
+
+
 def decide(situation):
-    """The authored policy. Pure; reads the shape of a failure, never code."""
-    return s32(eval(LAW, {"__builtins__": {}}, {"x": s32(situation)})) % 11
+    """The authored policy. Pure; reads the shape of a failure, never code.
+
+    The law is compiled at import. Passing the source string to eval() on every
+    call made this 138x slower than the figure this project published, because
+    eval() recompiles a string argument every time it is called. The published
+    2.5 us was never measured against the shipped code path."""
+    return s32(eval(_LAW_CODE, _EMPTY, {"x": s32(situation)})) % 11
 
 import ast, os, re, sys, json, subprocess, tempfile, itertools
 
@@ -271,3 +280,54 @@ def repair(act, src, err):
 
 def sit(obs):
     return sum(1 << BITS.index(b) for b in obs if b in BITS)
+
+
+# ---------------------------------------------------------------------------
+# USAGE.md has documented these two since the first release and the package
+# never exported them, so the copy-paste example in the docs raised
+# AttributeError for every reader who tried it. Implemented here.
+
+def observe_traceback(out):
+    """Read a pytest/interpreter dump and return the observation set.
+
+    Mechanical: it reports only exception names the run actually printed, and
+    never a judgement about what they mean."""
+    o = set()
+    for name, bit in (("NameError", "E_NAME"), ("TypeError", "E_TYPE"),
+                      ("IndexError", "E_INDEX"), ("KeyError", "E_INDEX"),
+                      ("ZeroDivisionError", "E_ZERO"),
+                      ("AttributeError", "E_ATTR"), ("ValueError", "E_VALUE"),
+                      ("AssertionError", "E_ASSERT"),
+                      ("RecursionError", "E_RECUR")):
+        if name in out:
+            o.add(bit)
+    if not o:
+        o.add("OUT_WRONG")
+    if "E_NAME" in o:
+        m = re.search(r"name '(\w+)' is not defined", out)
+        if m and m.group(1) in ("math", "os", "re", "json", "random", "time",
+                                "string", "itertools", "collections"):
+            o.add("N_MODULE")
+    return o
+
+
+def target_file(out, root=None, package=None):
+    """The deepest frame the run names inside your package, as (path, line).
+
+    Returns None when the traceback names no such frame -- which is the normal
+    case for a plain assertion failure, where only the test file appears. That
+    is not a bug in this function; it is the reason a policy whose acts all
+    suppress exceptions cannot reach a wrong-value defect."""
+    best = None
+    for m in re.finditer(r'File "([^"]+)", line (\d+)', out):
+        path, line = m.group(1), int(m.group(2))
+        if not path.endswith(".py") or not os.path.exists(path):
+            continue
+        if package and package not in path:
+            continue
+        if root and not os.path.abspath(path).startswith(os.path.abspath(root)):
+            continue
+        if "test" in os.path.basename(path):
+            continue
+        best = (path, line)
+    return best
