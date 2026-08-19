@@ -1,9 +1,0 @@
-*.pyc
-build/
-dist/
-*.egg-info/
-bench/shakespeare.txt
-.coverage
-*.sw?
-.DS_STORE
-\.tox/
