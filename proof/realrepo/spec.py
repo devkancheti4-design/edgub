@@ -58,9 +58,6 @@ def build(root, cfg, ids=None):
                 eobs.add(bit)
         eobs = eobs or {"OUT_WRONG"}
         eact = edgub.ACTS[edgub.decide(edgub.sit(eobs))]
-        # the engine law rules on the PROCESS: a target exists, nothing built yet
-        gobs = {} if tg else {"NOTWIN": 1}
-        gact = EL.ACTS[EL.decide(EL.situation("DEBUG", **gobs))]
         mod, func = tg[0] if tg else (None, None)
         src = ""
         if mod:
@@ -71,7 +68,7 @@ def build(root, cfg, ids=None):
                     src = "\n".join(lines[n.lineno - 1:n.end_lineno])
         out.append({"id": b["id"], "mod": mod, "func": func,
                     "edgub_obs": sorted(eobs), "edgub_act": eact,
-                    "engine_act": gact, "failing": F.failing_nodes(run),
+                    "failing": F.failing_nodes(run),
                     "run": run[:2500], "src": src})
     return out
 
@@ -81,9 +78,14 @@ if __name__ == "__main__":
     cfg = F.REPOS[tag]
     spec = build(cfg["root"], cfg)
     json.dump(spec, open(os.path.join(HERE, "spec_%s.json" % tag), "w"), indent=1)
-    print("%-20s %-12s %-24s %-22s %s"
-          % ("bug", "observation", "edgub's act", "engine law's act", "target"))
+    print("%-20s %-16s %-24s %s" % ("bug", "observation", "edgub's act", "target"))
     for s in spec:
-        print("%-20s %-12s %-24s %-22s %s.%s"
-              % (s["id"], "+".join(s["edgub_obs"])[:12], s["edgub_act"],
-                 s["engine_act"], (s["mod"] or "-").split(".")[-1], s["func"]))
+        print("%-20s %-16s %-24s %s.%s"
+              % (s["id"], "+".join(s["edgub_obs"])[:16], s["edgub_act"],
+                 (s["mod"] or "-").split(".")[-1], s["func"]))
+    import collections
+    c = collections.Counter(s["edgub_act"] for s in spec)
+    print("\n  the act list as shipped rules:")
+    for a, n in c.most_common():
+        print("    %-18s %d of %d" % (a, n, len(spec)))
+    print("  acts among these that repair a wrong value: 0")
