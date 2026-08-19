@@ -131,7 +131,7 @@ if __name__ == "__main__":
     for b in bugs:
         repo = os.path.join(work, b["id"])
         shutil.copytree(os.path.join(cfg["root"], b["id"]), repo,
-                        ignore=shutil.ignore_patterns("__pycache__"))
+                        ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
         failed, out = F.run_suite(repo, cfg["ignore"])
         obs = observe(out)
         idx = edgub.decide(edgub.sit(obs))          # UNCHANGED

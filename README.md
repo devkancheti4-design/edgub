@@ -8,7 +8,7 @@ import edgub
 act = edgub.ACTS[edgub.decide(edgub.sit({"E_NAME"}))]   # -> DEFINE_NAME
 ```
 
-## Everything claimed here can be run
+**How it works, and why it is not a lookup table:**\n[HOW_IT_WORKS.md](HOW_IT_WORKS.md) — one decision traced end to end,\nevery number computed live by `proof/realrepo/walkthrough.py`.\n\n## Everything claimed here can be run
 
 ```bash
 ./verify.sh

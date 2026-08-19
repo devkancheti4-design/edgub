@@ -25,7 +25,7 @@ for bid in (_s.argv[1:] or ["unique_wrongvar", "get_default_inv", "diff_nodefaul
     if os.path.exists(repo):
         shutil.rmtree(repo)
     shutil.copytree(os.path.join(cfg["root"], bid), repo,
-                    ignore=shutil.ignore_patterns("__pycache__"))
+                    ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
     failed, out = F.run_suite(repo, cfg["ignore"])
     obs = R.observe(out)
     idx = edgub.decide(edgub.sit(obs))          # UNCHANGED

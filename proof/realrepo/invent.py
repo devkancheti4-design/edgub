@@ -96,7 +96,7 @@ if __name__ == "__main__":
     for bid, (mod, func) in TARGETS.items():
         repo = os.path.join(work, bid)
         shutil.copytree(os.path.join(cfg["root"], bid), repo,
-                        ignore=shutil.ignore_patterns("__pycache__"))
+                        ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
         failed, out = F.run_suite(repo, cfg["ignore"])
         red = F.failing_nodes(out)
         t0 = time.time()
