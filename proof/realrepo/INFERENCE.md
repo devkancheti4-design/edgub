@@ -50,3 +50,48 @@ the damage gate counted comments file-wide, so any target function
 a candidate breaking the import aborted the whole run instead of being
   rejected as a bad candidate
 ```
+
+## Both repaired, and checked against a reference — not a test suite
+
+```
+partition_alwayspad   1 repaired, 3.5s, 0 tokens, 4 candidates
+diff_nodefault        1 repaired, 4.8s, 0 tokens, 7 candidates
+```
+
+Enumeration exhausted **808** and **25,057** candidates on these and solved
+neither.
+
+Verified the way that actually settles it — against the pre-injection original
+over every input in the space, not against the suite:
+
+```
+partition_alwayspad   AGREES WITH THE ORIGINAL on all 360 inputs
+diff_nodefault        AGREES WITH THE ORIGINAL on all 147 inputs
+```
+
+That distinction is not pedantry. Three separate false results today greened a
+test suite: `diff(..., fillvalue=pad)` was the wrong callee, tabulate's rewritten
+file was 1,397 deleted lines, and an earlier "partition repaired" was a module
+that would not import. **A passing suite is a sample. A reference is a verdict.**
+
+## The two synthesis bugs that were blocking partition
+
+```
+it appended `fillvalue=pad` to a call that ALREADY had it
+   -> SyntaxError: keyword argument repeated; the module would not import
+
+it generated only one orientation
+   -> diff's body pads nothing and needs the padding arm ADDED
+      partition's body already pads and needs the plain arm RESTORED
+```
+
+Both orientations are now generated and every candidate is compiled before it
+is offered.
+
+## What is still missing, named rather than hidden
+
+edgub has no **REFUSE** verdict. When it cannot reach a repair it prints a
+sentence I wrote — "the supplied edit classes cannot express this repair" —
+rather than deriving what was missing. A reasoner that says *more declared
+material, not more depth* would name the gap. That is the next piece, and it is
+not built.

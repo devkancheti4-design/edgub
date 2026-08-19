@@ -181,26 +181,52 @@ def synthesise(src, func, keyword, sentinel, arm_callee, arm_keyword):
                      if isinstance(c, ast.Call) and isinstance(c.func, ast.Name)]
             if not calls:
                 continue
+            # Build the PADDING arm: the callee that honours the keyword.
+            # Never add a keyword the call already has -- partition's buggy body
+            # is already zip_longest(*args, fillvalue=pad), and appending it a
+            # second time is `keyword argument repeated`, a SyntaxError.
             alt = copy.deepcopy(st)
             for c in ast.walk(alt):
                 if isinstance(c, ast.Call) and isinstance(c.func, ast.Name):
                     c.func = ast.Name(id=arm_callee, ctx=ast.Load())
-                    c.keywords = list(c.keywords) + [ast.keyword(
-                        arg=arm_keyword, value=ast.Name(id=keyword, ctx=ast.Load()))]
+                    if not any(k.arg == arm_keyword for k in c.keywords):
+                        c.keywords = list(c.keywords) + [ast.keyword(
+                            arg=arm_keyword,
+                            value=ast.Name(id=keyword, ctx=ast.Load()))]
+                    break
+            # Build the PLAIN arm: the same call with the padding keyword
+            # STRIPPED. Which side the current statement belongs on depends on
+            # what it already does -- diff's body pads nothing and needs the
+            # padding arm added; partition's body already pads and needs the
+            # plain arm restored. Both orientations are generated.
+            plain = copy.deepcopy(st)
+            for c in ast.walk(plain):
+                if isinstance(c, ast.Call) and isinstance(c.func, ast.Name):
+                    c.keywords = [k for k in c.keywords if k.arg != arm_keyword]
+                    base = arm_callee.split("_")[0]
+                    if base and base != arm_callee:
+                        c.func = ast.Name(id=base, ctx=ast.Load())
                     break
             test = ast.Compare(left=ast.Name(id=keyword, ctx=ast.Load()),
                                ops=[ast.Is()],
                                comparators=[ast.parse(sentinel, mode="eval").body])
-            node = ast.If(test=test, body=[copy.deepcopy(st)], orelse=[alt])
-            t2 = copy.deepcopy(fn)
-            for h2 in ast.walk(t2):
-                b2 = getattr(h2, "body", None)
-                if isinstance(b2, list) and len(b2) == len(body) and i < len(b2) \
-                   and ast.dump(b2[i]) == ast.dump(st):
-                    b2[i] = node
-                    ast.fix_missing_locations(t2)
-                    yield ast.unparse(t2)
-                    break
+            for if_arm, else_arm in ((copy.deepcopy(st), alt),
+                                     (plain, copy.deepcopy(st))):
+                node = ast.If(test=test, body=[if_arm], orelse=[else_arm])
+                t2 = copy.deepcopy(fn)
+                for h2 in ast.walk(t2):
+                    b2 = getattr(h2, "body", None)
+                    if isinstance(b2, list) and len(b2) == len(body) and i < len(b2) \
+                       and ast.dump(b2[i]) == ast.dump(st):
+                        b2[i] = node
+                        ast.fix_missing_locations(t2)
+                        try:
+                            out = ast.unparse(t2)
+                            compile(out, "<c>", "exec")
+                        except SyntaxError:
+                            break
+                        yield out
+                        break
 
 
 import copy  # noqa: E402  (used by synthesise)
