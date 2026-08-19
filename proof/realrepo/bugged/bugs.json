@@ -1,0 +1,62 @@
+[
+ {
+  "id": "unique_wrongvar",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "wrong variable: keys the item, remembers the item"
+ },
+ {
+  "id": "groupby_wrongvar",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "wrong variable: collects the key instead of the item"
+ },
+ {
+  "id": "reduceby_nocontinue",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "missing branch exit: the first item is folded into itself"
+ },
+ {
+  "id": "partition_alwayspad",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "branch collapsed: pads even when no pad was asked for"
+ },
+ {
+  "id": "sliding_off",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "boundary: the window starts one element late"
+ },
+ {
+  "id": "itemfilter_swap",
+  "file": "toolz/dicttoolz.py",
+  "kind": "hard",
+  "why": "unpacking reversed: key and value exchanged"
+ },
+ {
+  "id": "merge_with_order",
+  "file": "toolz/dicttoolz.py",
+  "kind": "hard",
+  "why": "order reversed: only visible when the folding function is not commutative"
+ },
+ {
+  "id": "diff_nodefault",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "branch collapsed: the caller-supplied default is ignored"
+ },
+ {
+  "id": "join_sides",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "pair order reversed on the inner-join branch only"
+ },
+ {
+  "id": "get_default_inv",
+  "file": "toolz/itertoolz.py",
+  "kind": "hard",
+  "why": "condition inverted on the TypeError branch only"
+ }
+]

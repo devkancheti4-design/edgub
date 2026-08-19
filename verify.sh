@@ -1,9 +1,9 @@
 #!/bin/sh
-# Everything a buyer should be able to run from a clean clone. If any line here
-# fails, the claim it supports is not backed and should not be in the README.
+# Every claim in the README, run from a clean clone. If a line fails, the claim
+# it supports is not backed and does not belong in the README.
 set -e
 cd "$(dirname "$0")"
-echo "== decide() speed =="
+echo "== 1. decide() speed =="
 python3 -c "
 import sys, time; sys.path.insert(0,'.')
 import edgub
@@ -11,8 +11,13 @@ for _ in range(200): edgub.decide(7)
 N=20000; t=time.perf_counter()
 for i in range(N): edgub.decide(i&255)
 print('   %.2f us per call' % ((time.perf_counter()-t)/N*1e6))"
-echo "== self-test =="
+echo "== 2. self-test on toy programs =="
 python3 proof/selftest.py | tail -2
-echo "== real-repo, acts as shipped vs corrected =="
-echo "   (clones toolz, injects 10 hard bugs, runs the law)"
-cd proof/realrepo && python3 inject_hard.py bugged >/dev/null && python3 spec.py hard | tail -3
+echo "== 3. is it a lookup table? =="
+python3 proof/realrepo/not_a_lookup.py | grep -E "length:|entries stored|answered but never|never in the authoring"
+echo "== 4. real repo: what the shipped act list rules =="
+cd proof/realrepo
+[ -d bugged ] || python3 inject_hard.py bugged >/dev/null
+python3 spec.py hard | tail -4
+echo "== 5. token cost =="
+python3 token_cost.py | grep -E "tokens spent|api keys|TOTAL|opus 5 deciding|AS SHIPPED|corrected"

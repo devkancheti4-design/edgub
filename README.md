@@ -93,3 +93,41 @@ git clone https://github.com/devkancheti4-design/edgub && cd edgub
 ```
 
 Standard library only. No dependencies.
+
+## Is it a lookup table?
+
+The commonest reading of this project is that `decide()` is a disguised table of
+memorised answers. `proof/realrepo/not_a_lookup.py` settles it:
+
+```
+the entire policy               63 characters of arithmetic
+situations it answers           32,768
+events it was authored from     11        (0.034% of them)
+acts reachable                  11 of 11, none dead
+two-fault situations it rules
+on and was never authored on    91
+entries stored                  0
+```
+
+The repairs are not stored either: on the ten hard bugs, 148 candidate edits
+were generated and each had to green all 185 tests. Nothing is retrieved.
+
+## Token cost
+
+`proof/realrepo/token_cost.py`. The law's side is measured when you run it; the
+model's side is a recorded measurement from 2026-08-19, listed with provenance
+in the file header rather than estimated.
+
+```
+opus 5 deciding for itself             10/10    74,964 tokens   ($0.38-$1.87)
+edgub as shipped                        0/10         0 tokens   + 7 test suites weakened
+edgub with act meanings corrected       9/10         0 tokens
+```
+
+Two honest qualifications, both in the script's own output:
+
+- **The 9/10 is not the shipped package.** It lives in
+  `proof/realrepo/edgub_repair.py`. What ships scores 0/10.
+- **Zero tokens is not zero cost.** That run evaluated 148 candidate programs,
+  each a test-suite execution. On a wide function with weak doctests it is
+  minutes of CPU. A token comparison hides this entirely.
