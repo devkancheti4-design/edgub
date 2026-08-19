@@ -28,8 +28,10 @@ def solve(repo, module, func, failing, pytest_args=(), mem=None, baseline=None):
     src = open(path).read()
     ex = _examples(repo, path, func, failing)
     got = infer(ex, func, module, src=src)
-    if not got:
-        return None, None, "no inference from %d examples" % len(ex), time.time() - t0
+    from .infer import Refusal
+    if isinstance(got, Refusal) or not got:
+        why = str(got) if got else "no examples the body could supply"
+        return None, None, why, time.time() - t0
 
     sig = Memory.signature({"E_ASSERT"}, "REPAIR_LIBRARY",
                            {"kind": got["kind"], "keyword": got["keyword"]})

@@ -173,3 +173,70 @@ work. 64.5% is the matched-conditions number and the only one to quote.
 environment where this was built, so `Anthropic` is untested against the live
 API; `Callable_` and the whole surrounding pipeline are tested. Do not treat
 the adapter as proven until you have run it once yourself.
+
+## The four layers
+
+```
+BRAIN   the law         decides WHICH class of repair a fault is
+        the algorithm   derives the rule from the body's examples, WIDENS
+                        its material when it cannot, and REFUSES naming
+                        what was absent
+        -- fused, one brain, not two stages
+
+BODY    your model      supplies DATA and EXAMPLES. Asked for material,
+                        not for a fix.
+
+ENGINE  the checker     proves it against a reference, not a test sample
+```
+
+### Widening is material, not depth
+
+The differential vocabulary grows rather than the search deepening:
+
+```
+length -> type -> raises-vs-returns -> value
+```
+
+If no keyword separates the examples by output length, it widens the lens and
+asks again. Only when every lens is exhausted does it refuse — and the refusal
+names the gap:
+
+```
+REFUSE: the examples do not distinguish any keyword's presence.
+        Widened through length/type/raises/value over 6 example(s)
+        and none separated them.
+```
+
+### The loop, and why it cannot cost you anything
+
+A refusal names what is missing, so the body is asked for **that material** —
+`Do NOT fix the function; supply examples that separate the cases` — and the
+algorithm re-derives. Repeat.
+
+```
+budget = the cost of asking directly
+stop the moment the loop has spent it, and ask directly instead
+```
+
+So the worst case **ties** a direct ask, and every other case is cheaper. It
+can never cost more than not having used it. `material_rounds` and `tied_out`
+report which happened.
+
+## Attribution
+
+The `fuse(Adapter(...))` interface — its shape, the `Callable_` / `Anthropic`
+adapter names, and the "one call, the model you already run goes in" framing —
+is taken from **proven-reason**'s `FUSE.md`
+(github.com/devkancheti4-design/proven-reason, Apache-2.0, © 2026 Devi Eswar
+Kancheti). No code was copied; the API design was, and it should be said.
+
+Its doctrine *more declared material, not more depth* is also the rule the
+widening above follows.
+
+## Still true, and still the limits
+
+- **One fault class is derived.** Missing keyword-gated branches. Everything
+  else falls through to enumeration — `unique_wrongvar` takes 117 candidates
+  and 30s that way.
+- **The live Anthropic adapter is unexercised.** `Callable_` and the pipeline
+  around it are tested; the API path is written, not proven.

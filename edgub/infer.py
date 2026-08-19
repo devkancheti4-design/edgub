@@ -33,23 +33,47 @@ def _call_to(src, func):
     return best
 
 
-def _shape(want):
+# The differential vocabulary IS material. When no lens in it separates the
+# examples, the answer is not "search deeper" -- it is MORE DECLARED MATERIAL:
+# widen the lens and ask again. Each rung reads something different out of the
+# same examples.
+LENSES = ("length", "type", "raises", "value")
+
+
+def _read(want, lens):
+    """Read one property out of an expected output. Never a judgement."""
+    raised = want.strip().endswith("Error") or "Traceback" in want
+    if lens == "raises":
+        return ("RAISES" if raised else "VALUE")
+    if raised:
+        return None
     try:
         v = ast.literal_eval(want)
     except Exception:
         return None
-    return len(v) if hasattr(v, "__len__") else 0
+    if lens == "length":
+        return len(v) if hasattr(v, "__len__") else 0
+    if lens == "type":
+        return type(v).__name__
+    if lens == "value":
+        return repr(v)
+    return None
 
 
-def branching_keyword(examples, func):
-    """Which keyword's PRESENCE changes the behaviour? A fact in the data."""
+def _shape(want):
+    return _read(want, "length")
+
+
+def branching_keyword(examples, func, lens="length"):
+    """Which keyword's PRESENCE changes the behaviour, under this lens?
+    A fact in the data, not a search."""
     rows = []
     for call, want in examples:
         c = _call_to(call, func)
         if c is None:
             continue
         kws = {k.arg: ast.unparse(k.value) for k in c.keywords if k.arg}
-        rows.append((kws, _shape(want), len(c.args)))
+        rows.append((kws, _read(want, lens), len(c.args)))
     keys = {k for kws, _, _ in rows for k in kws}
     for key in sorted(keys):
         with_k = [r for r in rows if key in r[0]]
@@ -61,7 +85,12 @@ def branching_keyword(examples, func):
         for arity in {r[2] for r in with_k} & {r[2] for r in without}:
             a = [r[1] for r in with_k if r[2] == arity and r[1] is not None]
             b = [r[1] for r in without if r[2] == arity and r[1] is not None]
-            if a and b and max(a) > max(b):
+            if not a or not b:
+                continue
+            if lens in ("length",):
+                if max(a) > max(b):
+                    return key, with_k[0][0][key], len(with_k), len(without)
+            elif set(map(str, a)) != set(map(str, b)):
                 return key, with_k[0][0][key], len(with_k), len(without)
     return None
 
@@ -123,11 +152,32 @@ def replaced_callee(src, func):
     return None
 
 
+class Refusal:
+    """Not a failure -- a verdict. It names the material that was absent, so the
+    next step is declared rather than guessed. `more declared material, not more
+    depth`."""
+
+    def __init__(self, missing, tried, n_examples):
+        self.missing, self.tried, self.n_examples = missing, tried, n_examples
+
+    def __str__(self):
+        return ("REFUSE: %s. Widened through %s over %d example(s) and none "
+                "separated them." % (self.missing, "/".join(self.tried),
+                                     self.n_examples))
+
+
 def infer(examples, func, module_name, pad_keywords=("fillvalue",), src=None):
     """Return a derived repair description, or None. Never a search."""
-    b = branching_keyword(examples, func)
+    b, used = None, []
+    for lens in LENSES:                       # WIDEN until something separates
+        used.append(lens)
+        b = branching_keyword(examples, func, lens)
+        if b:
+            break
     if not b:
-        return None
+        return Refusal(
+            "the examples do not distinguish any keyword's presence",
+            used, len(examples))
     key, shown, n_with, n_without = b
     replacing = replaced_callee(src, func) if src else None
     arms = []
@@ -135,6 +185,7 @@ def infer(examples, func, module_name, pad_keywords=("fillvalue",), src=None):
         arms += [(c, kw) for c in callables_accepting(module_name, kw, replacing)]
     return {
         "kind": "missing_branch",
+        "lens": used[-1],
         "keyword": key,
         "evidence": "%d examples pass `%s` and produce longer output; %d do not"
                     % (n_with, key, n_without),
