@@ -144,3 +144,25 @@ transformations and this packaging are ordinary engineering around it.
 The engine itself is private and is not part of this repository.
 
 Licence: Apache-2.0.
+
+## Does it generalise, or does it recall?
+
+On code that exists nowhere — twenty functions composed by a seeded generator,
+six examples each, judged on twenty held-out inputs neither side saw:
+
+```
+                       exact    abstained (⊥)    WRONG     tokens
+law, fair supply       19/20          1            0            0
+opus 5, four agents    19/20          0            1      178,544
+```
+
+Tied on coverage; the law never produced a wrong answer. Both missed the same
+program — the law returned ⊥, the model returned a function that fits all six
+examples and is wrong on held-out.
+
+Proved generalised rather than recalled by four checks, including a negative
+control: fed a different program's examples, **0 of 20** returned the original
+and **20 of 20** returned the empty space.
+
+Full method, results, token distribution, and a plainly stated account of the
+harness mistake that first scored this 17/20: [proof/generalisation/GENERALISATION.md](proof/generalisation/GENERALISATION.md)

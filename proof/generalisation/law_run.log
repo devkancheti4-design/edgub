@@ -1,0 +1,33 @@
+leak closed: the search now separates candidates on PROBE, never on the judging inputs
+ARM LAW, SUPPLIED FAIRLY — ENGINE_LAW.decide chooses every act
+
+id    verdict     tier  edits cands     acts the law took              held-out
+P00   DETERMINED  0     1     41        SHIP                           EXACT
+P01   DETERMINED  0     1     52        SHIP                           EXACT
+P02   DETERMINED  3     1     735       ADD_M->ADD_M->ADD_M->SHIP      EXACT
+P03   DETERMINED  1     1     186       ADD_M->SHIP                    EXACT
+P04   AMBIGUOUS   0     1     58        ADD_S                          EXACT
+P05   DETERMINED  0     1     54        SHIP                           EXACT
+P06   DETERMINED  0     1     71        SHIP                           EXACT
+P07   DETERMINED  0     1     49        SHIP                           EXACT
+P08   DETERMINED  0     1     65        SHIP                           EXACT
+P09   DETERMINED  0     1     65        SHIP                           EXACT
+P10   BOTTOM      3     2     532       ADD_M->ADD_M->ADD_M->RAISE->SHIP no
+P11   DETERMINED  0     1     52        SHIP                           EXACT
+P12   DETERMINED  0     1     57        SHIP                           EXACT
+P13   DETERMINED  0     1     81        SHIP                           EXACT
+P14   DETERMINED  0     1     64        SHIP                           EXACT
+P15   DETERMINED  0     1     54        SHIP                           EXACT
+P16   DETERMINED  0     1     46        SHIP                           EXACT
+P17   DETERMINED  0     1     56        SHIP                           EXACT
+P18   DETERMINED  0     1     65        SHIP                           EXACT
+P19   DETERMINED  0     1     32        SHIP                           EXACT
+
+  held-out EXACT            19/20
+  DETERMINED               18   of which exact 18
+  AMBIGUOUS                 1   of which exact 1
+  BOTTOM                    1   of which exact 0
+  wrong answers             0
+  tokens                    0
+
+[exited with code 0]

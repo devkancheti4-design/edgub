@@ -1,0 +1,28 @@
+id    with a DIFFERENT program's data returns the original?
+P00   empty space (no fit)         no
+P01   empty space (no fit)         no
+P02   empty space (no fit)         no
+P03   empty space (no fit)         no
+P04   empty space (no fit)         no
+P05   empty space (no fit)         no
+P06   empty space (no fit)         no
+P07   empty space (no fit)         no
+P08   empty space (no fit)         no
+P09   empty space (no fit)         no
+P10   empty space (no fit)         no
+P11   empty space (no fit)         no
+P12   empty space (no fit)         no
+P13   empty space (no fit)         no
+P14   empty space (no fit)         no
+P15   empty space (no fit)         no
+P16   empty space (no fit)         no
+P17   empty space (no fit)         no
+P18   empty space (no fit)         no
+P19   empty space (no fit)         no
+
+  returned the original anyway (would prove lookup) : 0 of 20
+  returned a fit to the corrupted data              : 0 of 20
+  returned the empty space                          : 20 of 20
+
+  bound declared: tier 0, one edit -- the setting that answered 18 of 20
+  in the real run. Nothing was searched and discarded silently.

@@ -1,0 +1,54 @@
+CHECK 1 — THE INPUTS USED TO SEARCH AND THE INPUTS USED TO JUDGE ARE DISJOINT
+
+   examples given to both sides : [0, 3, 7, 12, 25, 41]
+   probes the law chose itself  : [14, 16, 18, 20, 22, 24, 26, 27, 29, 30, 31, 32, 34, 35, 36, 60, 70, 80, 90, 100]
+   held-out, used only to judge : [1, 2, 4, 5, 6, 8, 9, 10, 11, 13, 15, 17, 19, 21, 23, 28, 33, 37, 44, 50]
+   examples ∩ held-out : empty
+   probes   ∩ held-out : empty
+   -> nothing the search touched appears in the judge.
+
+CHECK 2 — THE SHIPPED PROGRAM IS BEHAVIOURALLY IDENTICAL TO THE ORIGINAL
+   over ALL 46 inputs, not just the 6 it was given
+
+   P00   DETERMINED  agrees with the original on ALL of 46 inputs
+   P01   DETERMINED  agrees with the original on ALL of 46 inputs
+   P02   DETERMINED  agrees with the original on ALL of 46 inputs
+   P03   DETERMINED  agrees with the original on ALL of 46 inputs
+   P04   AMBIGUOUS   agrees with the original on ALL of 46 inputs
+   P05   DETERMINED  agrees with the original on ALL of 46 inputs
+   P06   DETERMINED  agrees with the original on ALL of 46 inputs
+   P07   DETERMINED  agrees with the original on ALL of 46 inputs
+   P08   DETERMINED  agrees with the original on ALL of 46 inputs
+   P09   DETERMINED  agrees with the original on ALL of 46 inputs
+   P10   BOTTOM      -- nothing shipped
+   P11   DETERMINED  agrees with the original on ALL of 46 inputs
+   P12   DETERMINED  agrees with the original on ALL of 46 inputs
+   P13   DETERMINED  agrees with the original on ALL of 46 inputs
+   P14   DETERMINED  agrees with the original on ALL of 46 inputs
+   P15   DETERMINED  agrees with the original on ALL of 46 inputs
+   P16   DETERMINED  agrees with the original on ALL of 46 inputs
+   P17   DETERMINED  agrees with the original on ALL of 46 inputs
+   P18   DETERMINED  agrees with the original on ALL of 46 inputs
+   P19   DETERMINED  agrees with the original on ALL of 46 inputs
+
+   recovered the original function exactly: 19 of 20 shipped
+
+CHECK 3 — THE PROGRAMS DO NOT EXIST ANYWHERE TO BE LOOKED UP
+   Every one was composed by a seeded generator from templates, with
+   randomly chosen variable names and constants. Sample, P00 as shipped:
+
+      def f(x):
+          p7 = 0
+          for i in range(6):
+              p7 = p7 + x % (3 + i)
+          return p7
+
+   original:
+
+      def f(x):
+          p7 = 0
+          for i in range(6):
+              p7 = p7 + x % (3 + i)
+          return p7
+
+
